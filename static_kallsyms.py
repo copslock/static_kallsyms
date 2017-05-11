@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import sys
 import struct
 
@@ -59,7 +61,8 @@ def find_kallsyms_addresses(kernel_data, kernel_text_start):
 	Searching for the beginning of the kernel's symbol table
 	Returns the offset of the kernel's symbol table, or -1 if the symbol table could not be found
 	'''
-	search_str = struct.pack("<I", DEFAULT_KERNEL_TEXT_START) * KALLSYMS_ADDRESSES_MIN_HEURISTIC
+        search_str = struct.pack("<4I", DEFAULT_KERNEL_TEXT_START, DEFAULT_KERNEL_TEXT_START, DEFAULT_KERNEL_TEXT_START + 0x4c, DEFAULT_KERNEL_TEXT_START + 0x100 )
+	#search_str = struct.pack("<I", DEFAULT_KERNEL_TEXT_START) * KALLSYMS_ADDRESSES_MIN_HEURISTIC
 	return kernel_data.find(search_str)
 
 def get_kernel_symbol_table(kernel_data, kernel_text_start):	
@@ -68,16 +71,21 @@ def get_kernel_symbol_table(kernel_data, kernel_text_start):
 	'''
 
 	#Getting the beginning and end of the kallsyms_addresses table
-	kallsyms_addresses_off = find_kallsyms_addresses(kernel_data, kernel_text_start)	
+	kallsyms_addresses_off = find_kallsyms_addresses(kernel_data, kernel_text_start)
+        print "kernel symbol table offset: %d" % kallsyms_addresses_off
+        if kallsyms_addresses_off == -1:
+            return None
+
 	kallsyms_addresses_end_off = kernel_data.find(struct.pack("<I", 0), kallsyms_addresses_off)
 	num_symbols = (kallsyms_addresses_end_off - kallsyms_addresses_off) / DWORD_SIZE
+        print "symbol number: %d" % num_symbols
 
 	#Making sure that kallsyms_num_syms matches the table size
 	kallsyms_num_syms_off = label_align(kallsyms_addresses_end_off + LABEL_ALIGN)
 	kallsyms_num_syms = read_dword(kernel_data, kallsyms_num_syms_off)
 	if kallsyms_num_syms != num_symbols:
 		print "[-] Actual symbol table size: %d, read symbol table size: %d" % (num_symbols, kallsyms_num_syms)
-		return None	
+		return None
 
 	#Calculating the location of the markers table
 	kallsyms_names_off = label_align(kallsyms_num_syms_off + LABEL_ALIGN)
@@ -128,8 +136,16 @@ def main():
 
 	#Getting the kernel symbol table
 	symbol_table = get_kernel_symbol_table(kernel_data, kernel_text_start)
-	for symbol in symbol_table:
-		print "%08X %s %s" % symbol
+        if symbol_table != None:
+            print "write kallsyms.out ..."
+            f = open("kallsyms.out", "w");
+	    for symbol in symbol_table:
+                f.write("%08x %s %s\n" % symbol)
+	        #print "%08X %s %s" % symbol
+            f.close()
+            print "Done!"
+        else:
+            print "can not find symbol table, quit!"
 	
 
 if __name__ == "__main__":
