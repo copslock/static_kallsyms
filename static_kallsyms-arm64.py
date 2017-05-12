@@ -6,6 +6,9 @@ import struct
 #The default address at which the kernel text segment is loaded
 DEFAULT_KERNEL_TEXT_START = 0xffffffc000080000
 
+# kernel address start
+KERNEL_START = 0xffffffc000000000
+
 #The size of the DWORD in a 64-bit architecture
 DWORD_SIZE = struct.calcsize("Q")
 
@@ -61,9 +64,38 @@ def find_kallsyms_addresses(kernel_data, kernel_text_start):
 	Searching for the beginning of the kernel's symbol table
 	Returns the offset of the kernel's symbol table, or -1 if the symbol table could not be found
 	'''
+        '''
         search_str = struct.pack("<4Q", DEFAULT_KERNEL_TEXT_START, DEFAULT_KERNEL_TEXT_START + 0x40
                                  , DEFAULT_KERNEL_TEXT_START + 0x80, DEFAULT_KERNEL_TEXT_START + 0x80 )
-	return kernel_data.find(search_str)
+        offset =  kernel_data.find(search_str)
+        '''
+        # based on symbol number count
+
+        count = 0
+        offset = 0
+        offset2 = 0
+        find = False
+
+        while offset < len(kernel_data):
+            value = read_dword(kernel_data, offset)
+
+            offset2 = offset
+            while value >= KERNEL_START:
+                count += 1
+                offset2 += DWORD_SIZE
+                value = read_dword(kernel_data, offset2)
+
+                if count > 20000:
+                    find = True
+                    break
+
+            if find:
+                break
+            else:
+                count = 0
+                offset = offset2 + DWORD_SIZE
+
+        return offset
 
 def get_kernel_symbol_table(kernel_data, kernel_text_start):
         '''
@@ -110,7 +142,7 @@ def get_kernel_symbol_table(kernel_data, kernel_text_start):
 	for i in range(0, num_symbols):
 		current_offset += read_byte(kernel_data, current_offset) + 1
 
-	kallsyms_markers_off = ((current_offset + (LABEL_ALIGN - 1)) / DWORD_SIZE) * DWORD_SIZE
+	kallsyms_markers_off = label_align(current_offset)
 
         # skip 0UL
         value = read_dword(kernel_data, kallsyms_markers_off)
@@ -139,7 +171,7 @@ def get_kernel_symbol_table(kernel_data, kernel_text_start):
                 #print "str = %s" % token_str
 		current_offset += len(token_str) + 1
 
-	kallsyms_token_index_off = ((current_offset + (LABEL_ALIGN - 1)) / DWORD_SIZE) * DWORD_SIZE
+	kallsyms_token_index_off = label_align(current_offset)
 
         #print "index_off = %x" % kallsyms_token_index_off
 
