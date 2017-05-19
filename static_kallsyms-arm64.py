@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import sys
 import struct
@@ -227,8 +228,10 @@ def main():
 	        #print "%08X %s %s" % symbol
             f.close()
             print "Done!"
+            sys.exit(0)
         else:
             print "can not find symbol table, quit!"
+            sys.exit(1)
 
 
 if __name__ == "__main__":
