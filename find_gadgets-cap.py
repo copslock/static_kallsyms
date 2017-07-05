@@ -501,7 +501,13 @@ def find_jop_read(kernel, hijack="ioctl"):
                         print "%016x\t%s\t%s" %(insn1.address, insn1.mnemonic, insn1.op_str)
                         print "%016x\t%s\t%s" %(insn2.address, insn2.mnemonic, insn2.op_str)
                         print "%016x\t%s\t%s" %(insn3.address, insn3.mnemonic, insn3.op_str)
-                        gadgets.append(insn1.address)
+                        gadget = []
+                        reg_in_offset = insn1_op2.mem.disp
+                        reg_out_offset = insn2_op2.mem.disp
+                        gadget.append(reg_in_offset)
+                        gadget.append(reg_out_offset)
+                        gadget.append(insn1.address)
+                        gadgets.append(gadget)
 
         index += 1
 
